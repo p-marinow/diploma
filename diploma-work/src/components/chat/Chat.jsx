@@ -20,7 +20,7 @@ const Chat = () => {
     const handleEmoji = e =>  setText(prevText => prevText + e.emoji);
 
     return (
-        <div className='chat' ref={endRef}>
+        <div className='chat'>
             <div className='top'>
                 <div className='user'>
                     <img src='./avatar.png' alt='' />
@@ -105,6 +105,8 @@ const Chat = () => {
                         <span>1 min ago</span>
                     </div>
                 </div>
+                
+                <div ref={endRef}></div>
             </div>
             <div className='bottom'>
                 <div className='icons'>
