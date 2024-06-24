@@ -1,5 +1,6 @@
 import {useEffect, useState, useRef} from 'react';
 import EmojiPicker from 'emoji-picker-react';
+import {toast} from 'react-toastify';
 import {
   arrayUnion,
   doc,
@@ -25,7 +26,7 @@ const Chat = () => {
 
     
     const {currentUser} = useUserStore();
-    const {chatId, user} = useChatStore();
+    const {chatId, user, isCurrentUserBlocked, isReceiverBlocked} = useChatStore();
 
     const endRef = useRef(null);
 
@@ -84,8 +85,7 @@ const Chat = () => {
                     );
 
                     userChatsData.chats[chatIndex].lastMessage = text;
-                    userChatsData.chats[chatIndex].isSeen =
-                    id === currentUser.id ? true : false;
+                    userChatsData.chats[chatIndex].isSeen = id === currentUser.id ? true : false;
                     userChatsData.chats[chatIndex].updatedAt = Date.now();
 
                     await updateDoc(userChatsRef, {
@@ -95,6 +95,7 @@ const Chat = () => {
             });
         } catch (err) {
             console.log(err);
+            toast.error('Failed to send message!');
         } finally{
             setImg({
                 file: null,
@@ -103,15 +104,28 @@ const Chat = () => {
 
             setText('');
         }
-    }
+    };
+
+    
+
+    const handleImg = e => {
+        
+        if (e.target.files[0]) {
+            setImg({
+                file: e.target.files[0],
+                url: URL.createObjectURL(e.target.files[0])
+            });
+        }
+
+    };
 
     return (
         <div className='chat'>
             <div className='top'>
                 <div className='user'>
-                    <img src='./avatar.png' alt='' />
+                    <img src={user?.avatar || './avatar.png'} alt='' />
                     <div className='texts'>
-                        <span>Jane Doe</span>
+                        <span>{user?.username}</span>
                         <p>Lorem ipsum dolor sit amet.</p>
                     </div>
                 </div>
@@ -124,11 +138,10 @@ const Chat = () => {
             <div className='center'>
 
                 {chat?.messages?.map(message => (
-                    <div className='message' key={message.createAt}>
-                        <img src='./avatar.png' alt='' />
+                    <div className={message.senderId === currentUser?.id ? 'message own' : 'message'} key={message.createAt}>
                         <div className='texts'>
                             {message.img && (
-                                <img src='./avatar.png' alt='' />
+                                <img src={message.img} alt='' />
                             )}
                             <p>
                                 {message.text}
@@ -138,20 +151,36 @@ const Chat = () => {
                     </div>
                 ))}
 
+                {img.url && (
+                    <div className='message own'>
+                        <div className='texts'>
+                            <img src={img.url} alt='' />
+                        </div>
+                    </div>
+                )}
+
                 <div ref={endRef}></div>
             </div>
             <div className='bottom'>
                 <div className='icons'>
-                    <img src='./img.png' alt='' />
+                    <label htmlFor='file'>
+                        <img src='./img.png' alt='' />
+                    </label>
+                    <input type='file' id='file' style={{display: 'none'}} onChange={handleImg} />
                     <img src='./camera.png' alt='' />
                     <img src='./mic.png' alt='' />
                 </div>
                 <input 
                     type='text' 
                     value={text}
-                    placeholder='Type a message...'
+                    placeholder={(isCurrentUserBlocked || isReceiverBlocked) ? 
+                        'You cannot send a message' 
+                    : 
+                        'Type a message...'
+                    }
                     onChange={handleChangeText}
-                    onFocus={handleOpenEmoji} 
+                    onFocus={handleOpenEmoji}                
+                    disabled={isCurrentUserBlocked || isReceiverBlocked}
                 />
                 <div className='emoji'>
                     <img src='./emoji.png' alt='' onClick={handleOpenEmoji}/>
@@ -165,6 +194,7 @@ const Chat = () => {
                 <button 
                     className='sendButton'
                     onClick={handleSendMessage}
+                    disabled={isCurrentUserBlocked || isReceiverBlocked}
                 >
                     Send
                 </button>
